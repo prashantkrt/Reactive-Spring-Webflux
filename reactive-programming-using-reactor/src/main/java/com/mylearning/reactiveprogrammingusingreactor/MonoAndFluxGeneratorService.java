@@ -61,6 +61,20 @@ public class MonoAndFluxGeneratorService {
         return Flux.fromArray(charArray);
     }
 
+    // flatmap with Mono
+    public Mono<List<String>> namesMono_flatmap(int stringLength) {
+        return Mono.just("alex")
+                .map(String::toUpperCase)
+                .filter(s -> s.length() > stringLength)
+                .flatMap(this::splitStringMono); //Mono<List of A, L, E  X>
+    }
+    private Mono<List<String>> splitStringMono(String s) {
+        var charArray = s.split("");
+        return Mono.just(List.of(charArray))
+                .delayElement(Duration.ofSeconds(1));
+    }
+
+
     // Mono to flux with flatmap
     public Flux<String> namesMono_flatmapMany(int stringLength) {
         Flux<String> flux = Mono.just("alex")
@@ -70,9 +84,11 @@ public class MonoAndFluxGeneratorService {
         return flux;
     }
 
-    // The Async nature of flatmap
+    // The Async nature of flatmap as order is not guaranteed.
     // Works asynchronously and concurrently — it does not preserve the order of the emitted inner elements
     // emissions are interleaved
+    // Executes inner Publishers concurrently (asynchronously).
+    // Good for parallel execution when order does not matter.
     public Flux<String> namesFlux_flatmap_async(int stringLength) {
         var namesList = List.of("alex", "ben", "chloe"); // a, l, e , x
         return Flux.fromIterable(namesList)
@@ -81,6 +97,21 @@ public class MonoAndFluxGeneratorService {
                 .filter(s -> s.length() > stringLength)
                 .flatMap(this::splitString_withDelay);
     }
+
+    // same as flatmap but it preserves the order.
+    // Waits for one inner Publisher to complete before subscribing to the next.
+    // Executes inner Publishers sequentially (one after another).
+    public Flux<String> namesFlux_concatmap(int stringLength) {
+        var namesList = List.of("alex", "ben", "chloe"); // a, l, e , x
+        return Flux.fromIterable(namesList)
+                //.map(s -> s.toUpperCase())
+                .map(String::toUpperCase)
+                .filter(s -> s.length() > stringLength)
+                //.flatMap((name)-> splitString(name));
+                .concatMap(this::splitString_withDelay);
+
+    }
+
 
     private Flux<String> splitString_withDelay(String name) {
         var delay = new Random().nextInt(1000);

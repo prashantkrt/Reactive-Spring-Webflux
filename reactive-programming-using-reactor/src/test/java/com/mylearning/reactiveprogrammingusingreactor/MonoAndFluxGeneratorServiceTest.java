@@ -124,4 +124,26 @@ public class MonoAndFluxGeneratorServiceTest {
                 .expectNextCount(12)
                 .verifyComplete();
     }
+
+    @Test
+    void namesFlux_concatmap() {
+        //given
+        int stringLength = 2;
+
+        var namesFlux = monoAndFluxGeneratorService.namesFlux_concatmap(stringLength);
+        StepVerifier.create(namesFlux)
+                .expectNext("A")
+                .expectNext("L")
+                .expectNext("E")
+                .expectNext("X")
+                .expectNext("B")
+                .expectNext("E")
+                .expectNext("N")
+                .expectNext("C")
+                .expectNext("H")
+                .expectNext("L")
+                .expectNext("O")
+                .expectNext("E")
+                .verifyComplete();
+    }
 }
