@@ -29,7 +29,7 @@ public class MovieInfo {
     private Integer year;
 
     @NotNull
-    private List<@NotBlank(message = "movieInfo.cast should be not be blank") String> cast;
+    private List<@NotBlank(message = "movieInfo.cast should not be blank") String> cast;
 
     private LocalDate releaseDate;
     private String description;

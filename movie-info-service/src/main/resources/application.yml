@@ -1,0 +1,43 @@
+server:
+    port: 8080
+
+spring:
+  application:
+    name: movie-info-service
+  profiles:
+    active: local
+
+logging:
+  level:
+    root: info
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: localdb
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: devdb
+
+
+
+
+
+
+
+
