@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -12,7 +11,8 @@ import reactor.test.StepVerifier;
 
 import java.time.Duration;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @WebFluxTest(controllers = FluxAndMonoController.class)
 @AutoConfigureWebTestClient
@@ -155,7 +155,7 @@ class FluxAndMonoControllerTest {
                 .expectStatus()
                 .is2xxSuccessful()
                 .expectBody(String.class) // This tells WebTestClient to deserialize the response body as a single String.
-                .consumeWith(stringEntityExchangeResult ->{
+                .consumeWith(stringEntityExchangeResult -> {
                     var response = stringEntityExchangeResult.getResponseBody();
                     assertEquals("hello-world", response);
                 });
