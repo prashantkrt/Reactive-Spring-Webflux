@@ -2,15 +2,21 @@ package com.mylearning.movieinfoservice.repository;
 
 import com.mylearning.movieinfoservice.model.MovieInfo;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.data.mongo.DataMongoTest;
 import org.springframework.test.context.ActiveProfiles;
 import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /*
 | Annotation    | When It Runs                      | Runs Once or Multiple   |
@@ -96,7 +102,7 @@ public class MovieInfoRepositoryTest {
                 )
         );
 
-       // movieInfoRepository.saveAll(movieinfos).collectList().block();
+        // movieInfoRepository.saveAll(movieinfos).collectList().block();
         MovieInfo movieInfo = movieInfoRepository.saveAll(movieinfos).blockLast();
 
     }
@@ -109,8 +115,206 @@ public class MovieInfoRepositoryTest {
 
     @Test
     void findAll() {
-        Flux<MovieInfo> movieInfoFlux = movieInfoRepository.findAll();
+        //given
+
+        //when
+        Flux<MovieInfo> movieInfoFlux = movieInfoRepository.findAll().log();
+
+        //then
+        StepVerifier.create(movieInfoFlux)
+                .expectNextCount(3)
+                .verifyComplete();
+
     }
 
+    @Test
+    void findAll2() {
+        //given
+
+        //when
+        Flux<MovieInfo> movieInfoFlux = movieInfoRepository.findAll().log();
+
+        //then
+        StepVerifier.create(movieInfoFlux)
+                .expectNextCount(2)
+                .consumeNextWith(info -> {
+                    assertEquals("abc123", info.getMovieId());
+                    assertEquals("Interstellar", info.getName());
+                    assertEquals(2014, info.getYear());
+                    assertEquals(List.of("Matthew McConaughey", "Anne Hathaway"), info.getCast());
+                    assertEquals(LocalDate.of(2014, 11, 7), info.getReleaseDate());
+                })
+                .verifyComplete();
+
+    }
+
+    @Test
+    void findAll3() {
+        //given
+
+        //when
+        Flux<MovieInfo> movieInfoFlux = movieInfoRepository.findAll().log();
+
+        //then
+        StepVerifier.create(movieInfoFlux)
+                .thenConsumeWhile(info -> Objects.nonNull(info.getName()))
+                .verifyComplete();
+
+    }
+
+    @Test
+    void findById() {
+        //given
+
+        //when
+        var movieInfo = movieInfoRepository.findById("abc123").log();
+
+        //then
+        StepVerifier.create(movieInfo)
+                .expectNextMatches(info -> info.getMovieId().equals("abc123"))
+                .verifyComplete();
+
+    }
+
+    @Test
+    void findById2() {
+        //given
+
+        //when
+        var movieInfo = movieInfoRepository.findById("abc123").log();
+
+        //then
+        StepVerifier.create(movieInfo)
+                .assertNext(info -> {
+                    assertEquals("abc123", info.getMovieId());
+                    assertEquals("Interstellar", info.getName());
+                    assertEquals(2014, info.getYear());
+                    assertEquals(List.of("Matthew McConaughey", "Anne Hathaway"), info.getCast());
+                    assertEquals(LocalDate.of(2014, 11, 7), info.getReleaseDate());
+                })
+                .verifyComplete();
+
+    }
+
+    @Test
+    void findById3() {
+        //given
+
+        //when
+        var movieInfo = movieInfoRepository.findById("abc123").log();
+
+        //then
+        StepVerifier.create(movieInfo)
+                .assertNext(info -> {
+                    assertEquals("abc123", info.getMovieId());
+                    assertEquals("Interstellar", info.getName());
+                    assertEquals(2014, info.getYear());
+                    assertEquals(List.of("Matthew McConaughey", "Anne Hathaway"), info.getCast());
+                    assertEquals(LocalDate.of(2014, 11, 7), info.getReleaseDate());
+                })
+                .verifyComplete();
+
+    }
+
+    @Test
+    void saveMovieInfo() {
+
+        //given
+        var movieInfo = new MovieInfo(
+                "def123",
+                "The Godfather",
+                1972,
+                List.of("Marlon Brando", "Al Pacino", "James Caan"),
+                LocalDate.of(1972, 3, 15),  // direct date creation
+                "The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son."
+        );
+        //when
+        var savedMovieInfo = movieInfoRepository.save(movieInfo);
+
+        StepVerifier.create(savedMovieInfo)
+                .assertNext(info -> {
+                    assertNotNull(info.getMovieId());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void updateMovieInfo() {
+
+        //given
+        var savedMovieInfo = movieInfoRepository.save(new MovieInfo(
+                "mar123",
+                "The Martian",
+                2015,
+                List.of("Matt Damon", "Jessica Chastain", "Kristen Wiig"),
+                LocalDate.of(2015, 10, 2),  // direct date creation
+                "An astronaut becomes stranded on Mars and must use his ingenuity to survive until he can be rescued."
+        ));
+        var movieInfo = savedMovieInfo.block();
+
+        // when
+        movieInfo = movieInfoRepository.findById("mar123").block();
+        if (movieInfo != null) {
+            movieInfo.setYear(2020);
+        }
+        var updatedMovieInfo = movieInfoRepository.save(movieInfo);
+
+        //then
+        StepVerifier.create(updatedMovieInfo)
+                .assertNext(movieInfo1 -> {
+                    assertNotNull(movieInfo1.getMovieId());
+                    assertEquals(2020, movieInfo1.getYear());
+                })
+                .expectComplete()
+                .verify();
+
+    }
+
+    @Test
+    void deleteMovieInfo() {
+
+        //given
+        var savedMovieInfo = movieInfoRepository.save(new MovieInfo(
+                "mar123",
+                "The Martian",
+                2015,
+                List.of("Matt Damon", "Jessica Chastain", "Kristen Wiig"),
+                LocalDate.of(2015, 10, 2),  // direct date creation
+                "An astronaut becomes stranded on Mars and must use his ingenuity to survive until he can be rescued."
+        ));
+        var movieInfo = savedMovieInfo.block();
+
+        //when
+        movieInfoRepository.deleteById("mar123").block();
+        var movieInfos = movieInfoRepository.findAll();
+
+        StepVerifier.create(movieInfos)
+                .expectNextCount(3)
+                .verifyComplete();
+
+    }
+
+    @Test
+    void findMovieInfoByYear() {
+
+        var movieInfosFlux = movieInfoRepository.findByYear(2014).log();
+
+        StepVerifier.create(movieInfosFlux)
+                .expectNextCount(1)
+                .verifyComplete();
+
+    }
+
+
+    @Test
+    void findByName() {
+
+        var movieInfosMono = movieInfoRepository.findByName("Inception").log();
+
+        StepVerifier.create(movieInfosMono)
+                .expectNextCount(1)
+                .verifyComplete();
+
+    }
 
 }
