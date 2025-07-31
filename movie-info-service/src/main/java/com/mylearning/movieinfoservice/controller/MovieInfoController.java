@@ -30,7 +30,7 @@ public class MovieInfoController {
     }
 
     @GetMapping("/getMovieInfo/{movieId}")
-    @ResponseStatus(HttpStatus.OK)
+    //@ResponseStatus(HttpStatus.OK)
     public Mono<MovieInfo> getMovieInfo(@PathVariable String movieId) {
         return movieInfoService.getMovieInfo(movieId);
     }

@@ -1,6 +1,7 @@
-package com.mylearning.movieinfoservice.repository;
+package com.mylearning.movieinfoservice.intg.repository;
 
 import com.mylearning.movieinfoservice.model.MovieInfo;
+import com.mylearning.movieinfoservice.repository.MovieInfoRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

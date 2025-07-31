@@ -1,4 +1,4 @@
-package com.mylearning.movieinfoservice.controller;
+package com.mylearning.movieinfoservice.intg.controller;
 
 import com.mylearning.movieinfoservice.model.MovieInfo;
 import com.mylearning.movieinfoservice.repository.MovieInfoRepository;

@@ -1,5 +1,6 @@
-package com.mylearning.movieinfoservice.controller;
+package com.mylearning.movieinfoservice.unit.controller;
 
+import com.mylearning.movieinfoservice.controller.FluxAndMonoController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
