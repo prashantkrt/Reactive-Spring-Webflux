@@ -1,6 +1,7 @@
 package com.mylearning.movieinfoservice.unit.controller;
 
 import com.mylearning.movieinfoservice.controller.MovieInfoController;
+import com.mylearning.movieinfoservice.controller.MovieInfoResponseEntityController;
 import com.mylearning.movieinfoservice.model.MovieInfo;
 import com.mylearning.movieinfoservice.service.MovieInfoServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -20,7 +21,7 @@ import java.util.Objects;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@WebFluxTest(controllers = MovieInfoController.class)
+@WebFluxTest(controllers = { MovieInfoController.class, MovieInfoResponseEntityController.class })
 @AutoConfigureWebTestClient
 public class MovieInfoControllerTest {
 
@@ -32,6 +33,7 @@ public class MovieInfoControllerTest {
     private WebTestClient webTestClient;
 
     private final String MOVIE_INFO_PATH = "/api/v1/movies";
+
 
     @Test
     void addNewMovieInfo() {
@@ -101,7 +103,7 @@ public class MovieInfoControllerTest {
                     assertTrue(error.contains("movieInfo.cast should not be blank"));
                     assertEquals(expectedErrorMessage, error);
 
-                    //since we have customize the error message in sorted order
+                    //since we have customized the error message in sorted order
                     assertEquals(expectedErrorMessage, error);
                 });
     }
@@ -211,6 +213,31 @@ public class MovieInfoControllerTest {
                     assertEquals("The Prestige", movieInfo.getName());
                 });
     }
+
+    @Test
+    void updateMovieInfo_notFound() {
+
+        var updatedMovieInfo = new MovieInfo(
+                "xyz",
+                "The Prestige",
+                2006,
+                List.of("Hugh Jackman", "Christian Bale"),
+                LocalDate.of(2006, 10, 20),
+                "Two rival magicians in 19th-century London engage in a battle of wits, illusions, and obsession."
+        );
+
+        Mockito.when(movieInfoService.updateMovieInfo(Mockito.isA(MovieInfo.class)))
+                .thenReturn(Mono.empty());
+
+        webTestClient
+                .put()
+                .uri(MOVIE_INFO_PATH + "/response-entity/updateMovieInfo")
+                .bodyValue(updatedMovieInfo)
+                .exchange()
+                .expectStatus()
+                .isNotFound();
+    }
+
 
     @Test
     void deleteMovieInfoById() {

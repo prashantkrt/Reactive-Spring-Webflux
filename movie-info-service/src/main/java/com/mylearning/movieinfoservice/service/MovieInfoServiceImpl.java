@@ -19,7 +19,7 @@ public class MovieInfoServiceImpl implements MovieInfoService {
 
     @Override
     public Mono<MovieInfo> addMovieInfo(MovieInfo movieInfo) {
-        return  movieInfoRepository.save(movieInfo).log();
+        return movieInfoRepository.save(movieInfo).log();
     }
 
     @Override
@@ -39,9 +39,17 @@ public class MovieInfoServiceImpl implements MovieInfoService {
 
     @Override
     public Mono<MovieInfo> updateMovieInfo(MovieInfo movieInfo) {
-        if (movieInfo != null) {
-            return addMovieInfo(movieInfo);
-        }
-        return Mono.fromRunnable(() -> log.info("MovieInfo is null"));
+
+        return movieInfoRepository.findById(movieInfo.getMovieId())
+                .flatMap(existingMovieInfo -> {
+                    existingMovieInfo.setName(movieInfo.getName());
+                    existingMovieInfo.setDescription(movieInfo.getDescription());
+                    existingMovieInfo.setYear(movieInfo.getYear());
+                    existingMovieInfo.setReleaseDate(movieInfo.getReleaseDate());
+                    existingMovieInfo.setCast(movieInfo.getCast());
+                    return movieInfoRepository.save(existingMovieInfo);
+                })
+                .switchIfEmpty(Mono.empty())
+                .log();
     }
 }
