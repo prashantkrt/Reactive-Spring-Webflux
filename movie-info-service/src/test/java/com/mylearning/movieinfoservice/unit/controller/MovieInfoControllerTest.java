@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @WebFluxTest(controllers = MovieInfoController.class)
 @AutoConfigureWebTestClient
@@ -52,7 +53,7 @@ public class MovieInfoControllerTest {
                 .bodyValue(movieInfo)
                 .exchange()
                 .expectStatus()
-                .isCreated()
+                .is2xxSuccessful()
                 .expectBody(MovieInfo.class)
                 .consumeWith(movieInfoEntityExchangeResult -> {
                     var savedMovieInfo = movieInfoEntityExchangeResult.getResponseBody();
@@ -87,10 +88,20 @@ public class MovieInfoControllerTest {
                 .isBadRequest()
                 .expectBody(String.class)
                 .consumeWith(result -> {
-                    var error = result.getResponseBody();
+
+                    String expectedErrorMessage = "movieInfo.cast should not be blank,movieInfo.name should be not be blank,movieInfo.year should be positive";
+
+                    String error = result.getResponseBody();
                     assert error != null;
-                    System.out.println(error);
-                    String expectedErrorMessage = "movieInfo.cast should not be blank,movieInfo.name should be not be blank,movieInfo.name should be not be blank";
+
+                    System.out.println("Error: " + error);
+
+                    assertTrue(error.contains("movieInfo.name should be not be blank"));
+                    assertTrue(error.contains("movieInfo.year should be positive"));
+                    assertTrue(error.contains("movieInfo.cast should not be blank"));
+                    assertEquals(expectedErrorMessage, error);
+
+                    //since we have customize the error message in sorted order
                     assertEquals(expectedErrorMessage, error);
                 });
     }

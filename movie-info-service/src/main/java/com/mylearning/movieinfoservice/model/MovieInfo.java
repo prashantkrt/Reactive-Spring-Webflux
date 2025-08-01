@@ -21,17 +21,21 @@ public class MovieInfo {
     @Id
     private String movieId; // we don't need to manually configure auto-generation of IDs for documents.
 
-    @NotBlank(message = "movieInfo.name should be not be blank")
+    @NotBlank(message = "movieInfo.name should be not be blank") // "" , " " amd null are not valid
     private String name;
 
-    @NotNull
+    @NotNull // null is not valid but "" and " " are valid
     @Positive(message = "movieInfo.year should be positive")
     private Integer year;
 
     @NotNull
     private List<@NotBlank(message = "movieInfo.cast should not be blank") String> cast;
 
+
+    @NotNull(message = "movieInfo.releaseDate must not be null")
     private LocalDate releaseDate;
     private String description;
 
 }
+
+// note  @NotEmpty // "" and null are not valid but " " is valid

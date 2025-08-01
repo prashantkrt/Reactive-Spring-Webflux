@@ -9,16 +9,17 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/api/v1/movies")
-public class MovieInfoController {
+@RequestMapping("/api/v1/movies/response-entity")
+public class MovieInfoResponseEntityController {
 
     private final MovieInfoService movieInfoService;
 
-    public MovieInfoController(MovieInfoService movieInfoService) {
+    public MovieInfoResponseEntityController(MovieInfoService movieInfoService) {
         this.movieInfoService = movieInfoService;
     }
 
     @PostMapping("/addMovieInfos")
+    @ResponseStatus(HttpStatus.CREATED)
     public Mono<MovieInfo> addMovieInfo(@RequestBody(required = true) @Valid MovieInfo movieInfo) {
         return movieInfoService.addMovieInfo(movieInfo);
     }
