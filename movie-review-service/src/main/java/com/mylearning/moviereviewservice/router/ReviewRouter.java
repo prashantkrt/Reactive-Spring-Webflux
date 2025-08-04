@@ -28,6 +28,7 @@ public class ReviewRouter {
                 .GET("/api/v1/greet/{name}", request -> {
                     return ServerResponse.ok().bodyValue("Hello " + request.pathVariable("name"));
                 })
+
                 .build();
     }
 }
