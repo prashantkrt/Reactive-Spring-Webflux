@@ -186,4 +186,10 @@ public class ProductRouter {
     /products/           | No     | Nothing after /products/ — doesn't match +
     /products/123/extra  | No     | The /extra part violates the [^/]+$ rule
 
+ How does ServerRequest request come to RequestPredicate
+ 1. Incoming HTTP request comes into the app.
+ 2. DispatcherHandler (the central handler in Spring WebFlux) delegates to the routing mechanism.
+ 3. It tries to match the request to a route using the RequestPredicate.
+ 4. Your RequestPredicate is just a wrapper around a Predicate<ServerRequest> → it’s a function that takes a ServerRequest and returns true/false.
+
 */
