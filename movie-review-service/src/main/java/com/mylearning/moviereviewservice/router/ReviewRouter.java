@@ -6,15 +6,17 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import static org.springframework.web.reactive.function.server.RequestPredicates.path;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
 /*
 .route().GET(String pattern, HandlerFunction<ServerResponse> handler)
 
-@FunctionalInterface
-public interface HandlerFunction<T extends ServerResponse> {
- Mono<T> handle(ServerRequest request);  returns ServerResponse
+ @FunctionalInterface
+ public interface HandlerFunction<T extends ServerResponse> {
+  Mono<T> handle(ServerRequest request);  returns ServerResponse
  }
+
 */
 @Configuration
 public class ReviewRouter {
@@ -28,6 +30,20 @@ public class ReviewRouter {
                 .GET("/api/v1/greet/{name}", request -> {
                     return ServerResponse.ok().bodyValue("Hello " + request.pathVariable("name"));
                 })
+//                .POST("/api/v1/review", reviewHandler::addReview)
+//                .GET("/api/v1/review/{id}", reviewHandler::getReview)
+//                .GET("/api/v1/review", reviewHandler::getAllReview)
+//                .PUT("/api/v1/review/{id}", reviewHandler::updateReview)
+//                .DELETE("/api/v1/review/{id}", reviewHandler::deleteReview)
+
+                //    we can also use nest
+                // => RouterFunctions.Builder nest(RequestPredicate predicate,Consumer<RouterFunctions.Builder> builderConsumer)
+                .nest(path("/api/v1/review"),builder ->
+                            builder.GET("", reviewHandler::getReview)
+                            .POST("", reviewHandler::addReview)
+                            .PUT("/{id}", reviewHandler::updateReview)
+                            .DELETE("/{id}", reviewHandler::deleteReview)
+                            .GET("/stream", reviewHandler::getAllReview))
                 .build();
     }
 }
