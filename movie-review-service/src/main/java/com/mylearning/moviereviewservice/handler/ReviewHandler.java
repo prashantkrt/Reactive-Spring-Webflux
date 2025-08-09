@@ -9,7 +9,10 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.Optional;
 
 @Component
 @Slf4j
@@ -21,7 +24,7 @@ public class ReviewHandler {
         this.reviewRepository = reviewRepository;
     }
 
-// Got error: If reviewRepository.save(review) is reactive (returns Mono<Review>), then bodyValue(...) is wrong, because bodyValue expects a plain object, not a Mono.
+// Got an error: If reviewRepository.save(review) is reactive (returns Mono<Review>), then bodyValue(...) is wrong, because bodyValue expects a plain object, not a Mono.
 
 //    Inside bodyValue(...), you’re passing reviewRepository.save(review), which is a Mono<Review>.
 //    bodyValue(...) does not accept reactive types — it expects a plain object like Review, String, etc.
@@ -60,6 +63,34 @@ public class ReviewHandler {
         return ServerResponse.ok().body(reviewRepository.findAll(), Review.class);
     }
 
+    //http://localhost:8081/api/v1/review/search?movieInfoId=101
+    public Mono<ServerResponse> getReviewByMovieInfoId(ServerRequest serverRequest) {
+        log.info("ReviewHandler.getReviewByMovieInfoId");
+        //queryParam() is a method of ServerRequest used to retrieve query parameters from the request URL.
+        //A query parameter is part of the URL that comes after the ? and is usually used to pass optional data to the server.
+        Optional<String> movieInfoId = serverRequest.queryParam("movieInfoId");
+        log.info("movieInfoId: {}", movieInfoId);
+
+        // Check if movieInfoId is present and not blank
+        if (movieInfoId.isEmpty() || movieInfoId.get().isBlank()) {
+            return ServerResponse.badRequest()
+                    .bodyValue("Query parameter 'movieInfoId' is required");
+        }
+        Flux<Review> reviewsFlux = reviewRepository.findReviewsByMovieInfoId(Long.valueOf(movieInfoId.get()));
+
+        // Asynchronous check for empty results
+        return reviewsFlux.hasElements() // hasElements() returns a Mono<Boolean>
+                .flatMap(hasElements -> {
+                    if (hasElements) {
+                        return ServerResponse.ok().body(reviewsFlux, Review.class);
+                    } else {
+                        return ServerResponse.status(HttpStatus.NOT_FOUND)
+                                .bodyValue("No reviews found for movieInfoId: " + movieInfoId);
+                    }
+                });
+
+    }
+
     public Mono<ServerResponse> updateReview(ServerRequest serverRequest) {
         log.info("ReviewHandler.updateReview");
         String id = serverRequest.pathVariable("id");
@@ -83,6 +114,47 @@ public class ReviewHandler {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .bodyValue(savedReview)
                 );
+    }
+
+    public Mono<ServerResponse> updateReview2(ServerRequest serverRequest) {
+        log.info("ReviewHandler.updateReview2");
+        var id = serverRequest.pathVariable("id");
+
+        return reviewRepository.findById(id)
+                .switchIfEmpty(Mono.error(new ReviewNotFoundException(
+                        "Review not Found for the given Review Id: " + id
+                )))
+//                .flatMap(existingReview -> serverRequest.bodyToMono(Review.class)
+//                        .map(updatedReview -> {
+//                            // update existing review with incoming data
+//                            existingReview.setComment(updatedReview.getComment());
+//                            existingReview.setRating(updatedReview.getRating());
+//                            existingReview.setMovieInfoId(updatedReview.getMovieInfoId());
+//                            return existingReview;
+//                        })
+//                )
+//                .flatMap(reviewRepository::save)
+//                .flatMap(savedReview -> ServerResponse.ok()
+//                        .contentType(MediaType.APPLICATION_JSON)
+//                        .bodyValue(savedReview)
+//                );
+
+                //or this both are same
+         .flatMap(existingReview -> serverRequest.bodyToMono(Review.class)
+                .map(updatedReview -> {
+                    // update existing review with incoming data
+                    existingReview.setComment(updatedReview.getComment());
+                    existingReview.setRating(updatedReview.getRating());
+                    existingReview.setMovieInfoId(updatedReview.getMovieInfoId());
+                    return existingReview;
+                })
+                 .flatMap(reviewRepository::save)
+                 .flatMap(savedReview -> ServerResponse.ok()
+                         .contentType(MediaType.APPLICATION_JSON)
+                         .bodyValue(savedReview)
+                 )
+        );
+
     }
 
 

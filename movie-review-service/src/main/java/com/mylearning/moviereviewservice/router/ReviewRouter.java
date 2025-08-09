@@ -38,12 +38,13 @@ public class ReviewRouter {
 
                 //    we can also use nest
                 // => RouterFunctions.Builder nest(RequestPredicate predicate,Consumer<RouterFunctions.Builder> builderConsumer)
-                .nest(path("/api/v1/review"),builder ->
-                            builder.GET("", reviewHandler::getReview)
-                            .POST("", reviewHandler::addReview)
-                            .PUT("/{id}", reviewHandler::updateReview)
-                            .DELETE("/{id}", reviewHandler::deleteReview)
-                            .GET("/stream", reviewHandler::getAllReview))
+                .nest(path("/api/v1/review"), builder ->
+                        builder.GET("/search", reviewHandler::getReviewByMovieInfoId)
+                                .GET("/{id}", reviewHandler::getReview)
+                                .POST("", reviewHandler::addReview)
+                                .PUT("/{id}", reviewHandler::updateReview)
+                                .DELETE("/{id}", reviewHandler::deleteReview)
+                                .GET("/stream", reviewHandler::getAllReview))
                 .build();
     }
 }
