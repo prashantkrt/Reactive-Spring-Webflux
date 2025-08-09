@@ -90,12 +90,23 @@ public class MonoAndFluxGeneratorService {
     // Executes inner Publishers concurrently (asynchronously).
     // Good for parallel execution when order does not matter.
     public Flux<String> namesFlux_flatmap_async(int stringLength) {
-        var namesList = List.of("alex", "ben", "chloe"); // a, l, e , x
+        var namesList = List.of("alex", "ben", "chloe");
         return Flux.fromIterable(namesList)
                 //.map(s -> s.toUpperCase())
                 .map(String::toUpperCase)
                 .filter(s -> s.length() > stringLength)
                 .flatMap(this::splitString_withDelay);
+                // let's take the fixed delay 0f 500ms
+                //Time(ms)   Output
+                //0          A   (from ALEX)
+                //0          C   (from CHLOE)
+                //500        L   (from ALEX)
+                //500        H   (from CHLOE)
+                //1000       E   (from ALEX)
+                //1000       L   (from CHLOE)
+                //1500       X   (from ALEX)
+                //1500       O   (from CHLOE)
+                //2000       E   (from CHLOE)
     }
 
     // same as flatmap but it preserves the order.
@@ -109,11 +120,22 @@ public class MonoAndFluxGeneratorService {
                 .filter(s -> s.length() > stringLength)
                 //.flatMap((name)-> splitString(name));
                 .concatMap(this::splitString_withDelay);
+                // let's take the fixed delay 0f 500ms
+                //Time(ms)   Output
+                //0          A   (from ALEX)
+                //500        L
+                //1000       E
+                //1500       X
+                //2000       C   (from CHLOE)
+                //2500       H
+                //3000       L
+                //3500       O
+                //4000       E
     }
 
 
     private Flux<String> splitString_withDelay(String name) {
-        var delay = new Random().nextInt(1000);
+        var delay = new Random().nextInt(500); //generates a random integer between 0 (inclusive) and 500 (exclusive).
         var charArray = name.split("");
         return Flux.fromArray(charArray)
                 .delayElements(Duration.ofMillis(delay));

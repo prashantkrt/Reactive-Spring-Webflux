@@ -46,6 +46,18 @@ public class ProductHandler {
         // Then it wraps that whole thing into a Mono<ServerResponse> — so the framework can handle it asynchronously.
     }
 
+
+    public Mono<ServerResponse> getAllProducts() {
+        Flux<Product> products = Flux.just(
+                new Product("1", "Phone", 699.0),
+                new Product("2", "Laptop", 1299.0)
+        );
+
+        return ServerResponse.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(products, Product.class); // returns a Mono<ServerResponse>
+    }
+
     // GET: Get a product by ID from path param
     public Mono<ServerResponse> getProductById(ServerRequest request) {
         String productId = request.pathVariable("id");

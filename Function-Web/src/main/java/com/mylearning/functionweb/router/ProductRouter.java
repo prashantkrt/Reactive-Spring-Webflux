@@ -127,8 +127,10 @@ public class ProductRouter {
     @Bean
     public RouterFunction<ServerResponse> productRoutes(ProductHandler handler) {
         return route(GET("/products"), handler::getAllProducts)
+                .andRoute(GET("/products"), request -> handler.getAllProducts())
                 .andRoute(GET("/products/{id}"), handler::getProductById)
                 .andRoute(POST("/products"), handler::createProduct)
+                //.andRoute(PUT("/products/{id}"), request -> handler.updateProduct(request))
                 .andRoute(PUT("/products/{id}"), handler::updateProduct)
                 .andRoute(DELETE("/products/{id}"), handler::deleteProduct)
                 .andRoute(
