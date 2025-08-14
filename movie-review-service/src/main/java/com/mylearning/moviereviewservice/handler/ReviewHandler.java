@@ -1,27 +1,43 @@
 package com.mylearning.moviereviewservice.handler;
 
 import com.mylearning.moviereviewservice.domain.Review;
+import com.mylearning.moviereviewservice.exception.ReviewDataException;
 import com.mylearning.moviereviewservice.exception.ReviewNotFoundException;
 import com.mylearning.moviereviewservice.repository.ReviewRepository;
+import com.mylearning.moviereviewservice.validator.ReviewValidator;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
 public class ReviewHandler {
 
+    // Approach 1
+    @Autowired
+    private ReviewValidator reviewValidator;
+
+    // Approach 2
+    @Autowired
+    private Validator validator;
+
     private final ReviewRepository reviewRepository;
 
-    public ReviewHandler(ReviewRepository reviewRepository) {
-        this.reviewRepository = reviewRepository;
+    public ReviewHandler(ReviewRepository reviewRepositor) {
+        this.reviewRepository = reviewRepositor;
     }
 
 // Got an error: If reviewRepository.save(review) is reactive (returns Mono<Review>), then bodyValue(...) is wrong, because bodyValue expects a plain object, not a Mono.
@@ -48,8 +64,39 @@ public class ReviewHandler {
         log.info("ReviewHandler.createReview");
 
         return serverRequest.bodyToMono(Review.class) // Mono<Review>
-                .flatMap(review -> reviewRepository.save(review))
+                .doOnNext(this::validate2) // review -> validate(review)
+                .flatMap(reviewRepository::save) // review -> reviewRepository.save(review)
                 .flatMap(review -> ServerResponse.status(HttpStatus.CREATED).bodyValue(review));
+    }
+
+    // custom Validation class implementation
+    // using org.springframework.validation
+    // org.springframework.validation.Validator interface, used for manual, programmatic validation.
+    private void validate1(Review review) {
+        BeanPropertyBindingResult errors = new BeanPropertyBindingResult(review, Review.class.getName());
+        reviewValidator.validate(review, errors);
+        if (errors.hasErrors()) {
+            String errorMessage = errors.getAllErrors()
+                    .stream()
+                    .map(error -> error.getCode() + " : " + error.getDefaultMessage())
+                    .sorted()
+                    .collect(Collectors.joining(","));
+            log.error("errorMessage : {} ", errorMessage);
+            throw new ReviewNotFoundException(errorMessage);
+        }
+    }
+
+    // using jakarta.validation.Validator
+    private void validate2(Review review) {
+        Set<ConstraintViolation<Review>> violations = validator.validate(review);
+        if (!violations.isEmpty()) {
+            String errorMessage = violations.stream()
+                    .map(error -> error.getMessage())
+                    .sorted()
+                    .collect(Collectors.joining(","));
+            log.error("errorMessage from validator2 : {} ", errorMessage);
+            throw new ReviewDataException(errorMessage);
+        }
     }
 
     public Mono<ServerResponse> getReview(ServerRequest serverRequest) {
@@ -140,20 +187,20 @@ public class ReviewHandler {
 //                );
 
                 //or this both are same
-         .flatMap(existingReview -> serverRequest.bodyToMono(Review.class)
-                .map(updatedReview -> {
-                    // update existing review with incoming data
-                    existingReview.setComment(updatedReview.getComment());
-                    existingReview.setRating(updatedReview.getRating());
-                    existingReview.setMovieInfoId(updatedReview.getMovieInfoId());
-                    return existingReview;
-                })
-                 .flatMap(reviewRepository::save)
-                 .flatMap(savedReview -> ServerResponse.ok()
-                         .contentType(MediaType.APPLICATION_JSON)
-                         .bodyValue(savedReview)
-                 )
-        );
+                .flatMap(existingReview -> serverRequest.bodyToMono(Review.class)
+                        .map(updatedReview -> {
+                            // update existing review with incoming data
+                            existingReview.setComment(updatedReview.getComment());
+                            existingReview.setRating(updatedReview.getRating());
+                            existingReview.setMovieInfoId(updatedReview.getMovieInfoId());
+                            return existingReview;
+                        })
+                        .flatMap(reviewRepository::save)
+                        .flatMap(savedReview -> ServerResponse.ok()
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .bodyValue(savedReview)
+                        )
+                );
 
     }
 

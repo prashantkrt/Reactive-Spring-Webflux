@@ -1,10 +1,10 @@
 package com.mylearning.moviereviewservice.unit;
 
-
 import com.mylearning.moviereviewservice.domain.Review;
 import com.mylearning.moviereviewservice.handler.ReviewHandler;
 import com.mylearning.moviereviewservice.repository.ReviewRepository;
 import com.mylearning.moviereviewservice.router.ReviewRouter;
+import com.mylearning.moviereviewservice.validator.ReviewValidator;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -22,7 +22,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @WebFluxTest
-@ContextConfiguration(classes = {ReviewRouter.class, ReviewHandler.class})
+@ContextConfiguration(classes = {ReviewRouter.class, ReviewHandler.class, ReviewValidator.class})
 @AutoConfigureWebTestClient
 public class ReviewRouterUnitTest {
 
@@ -151,5 +151,36 @@ public class ReviewRouterUnitTest {
                 .expectStatus()
                 .is2xxSuccessful();
     }
+
+    //With Validation
+
+
+    @Test
+    void addReview_validation() {
+
+        //given
+        var review = new Review(null, 1L, "Awesome Movie", 9.0);
+
+        Mockito.when(reviewRepository.save(Mockito.any(Review.class))).thenReturn(Mono.just(new Review("abc", 1L, "Awesome Movie", 9.0)));
+
+
+        //when
+        webTestClient
+                .post()
+                .uri("/api/v1/review")
+                .bodyValue(review)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(Review.class)
+                .consumeWith(reviewResponse -> {
+                    var savedReview = reviewResponse.getResponseBody();
+                    assert savedReview != null;
+                    assert savedReview.getReviewId() != null;
+                    assertEquals("abc", savedReview.getReviewId());
+                });
+
+    }
+
+
 
 }
