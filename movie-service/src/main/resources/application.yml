@@ -1,0 +1,16 @@
+server:
+  port: 8080
+---
+spring:
+  application:
+    name: movie-service
+  profiles:
+    active: local
+---
+restClient:
+  movie-info-service:
+    url: http://localhost:8080/api/v1/movieinfos
+  review-service:
+    url: http://localhost:8081/api/v1/reviews
+
+
