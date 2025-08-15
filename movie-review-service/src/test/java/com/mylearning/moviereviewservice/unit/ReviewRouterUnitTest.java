@@ -1,6 +1,7 @@
 package com.mylearning.moviereviewservice.unit;
 
 import com.mylearning.moviereviewservice.domain.Review;
+import com.mylearning.moviereviewservice.exceptionhandler.GlobalErrorHandler;
 import com.mylearning.moviereviewservice.handler.ReviewHandler;
 import com.mylearning.moviereviewservice.repository.ReviewRepository;
 import com.mylearning.moviereviewservice.router.ReviewRouter;
@@ -22,7 +23,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @WebFluxTest
-@ContextConfiguration(classes = {ReviewRouter.class, ReviewHandler.class, ReviewValidator.class})
+@ContextConfiguration(classes = {ReviewRouter.class, ReviewHandler.class, ReviewValidator.class, GlobalErrorHandler.class})
 @AutoConfigureWebTestClient
 public class ReviewRouterUnitTest {
 
@@ -55,7 +56,6 @@ public class ReviewRouterUnitTest {
                     assert savedReview.getReviewId() != null;
                     assertEquals("abc", savedReview.getReviewId());
                 });
-
     }
 
 
@@ -152,16 +152,16 @@ public class ReviewRouterUnitTest {
                 .is2xxSuccessful();
     }
 
-    //With Validation
 
-
+    // => With Validation
     @Test
     void addReview_validation() {
 
         //given
-        var review = new Review(null, 1L, "Awesome Movie", 9.0);
+        var review = new Review(null, null, "Awesome Movie", -9.0);
 
-        Mockito.when(reviewRepository.save(Mockito.any(Review.class))).thenReturn(Mono.just(new Review("abc", 1L, "Awesome Movie", 9.0)));
+        Mockito.when(reviewRepository.save(Mockito.any(Review.class)))
+                .thenReturn(Mono.just(new Review("abc", 1L, "Awesome Movie", 9.0)));
 
 
         //when
@@ -170,17 +170,49 @@ public class ReviewRouterUnitTest {
                 .uri("/api/v1/review")
                 .bodyValue(review)
                 .exchange()
-                .expectStatus().isCreated()
-                .expectBody(Review.class)
-                .consumeWith(reviewResponse -> {
-                    var savedReview = reviewResponse.getResponseBody();
-                    assert savedReview != null;
-                    assert savedReview.getReviewId() != null;
-                    assertEquals("abc", savedReview.getReviewId());
-                });
-
+                .expectStatus().isBadRequest()
+                .expectBody(String.class)
+                .isEqualTo("rating.movieInfoId : must not be null,rating.negative : please pass a non-negative value");
     }
 
+
+    @Test
+    void updateReview_validation() {
+
+        //given
+        var reviewUpdate = new Review(null, 1L, "Not an Awesome Movie", 8.0);
+
+        Mockito.when(reviewRepository.findById((String) Mockito.any())).thenReturn(Mono.empty());
+
+        //when
+        webTestClient
+                .put()
+                .uri("/api/v1/review/{id}", "abc")
+                .bodyValue(reviewUpdate)
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectBody(String.class)
+                .isEqualTo("Review not Found for the given Review Id: abc");
+    }
+
+    @Test
+    void deleteReview_validation() {
+
+        // Given
+        var reviewId = "abc";
+        Mockito.when(reviewRepository.findById((String) Mockito.any())).thenReturn(Mono.empty());
+
+        //when
+        webTestClient
+                .delete()
+                .uri("/api/v1/review/{id}", reviewId)
+                .exchange()
+                .expectStatus()
+                .isNotFound()
+                .expectBody(String.class)
+                .isEqualTo("Review not Found for the given Review Id: abc");
+    }
 
 
 }

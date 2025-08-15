@@ -4,6 +4,7 @@ import com.mylearning.moviereviewservice.exception.ReviewDataException;
 import com.mylearning.moviereviewservice.exception.ReviewNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.http.HttpStatus;
@@ -13,11 +14,15 @@ import reactor.core.publisher.Mono;
 
 @Component
 @Slf4j
+@Order(-2)
+//If the GlobalErrorHandler isn’t invoked,then another error-handling mechanism(e.g., Spring’s default handler) might be processing the exception, bypassing your logs.
+// Add the @Order annotation to your GlobalErrorHandler to ensure it takes precedence over the default error handler.
 public class GlobalErrorHandler implements ErrorWebExceptionHandler {
 
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
         log.error("Global exception caught: {}", ex.getMessage(), ex);
+        System.out.println("Hello from GlobalErrorHandler");
 
         DataBufferFactory dataBufferFactory = exchange.getResponse().bufferFactory();
         DataBuffer errorMessage = dataBufferFactory.wrap(ex.getMessage().getBytes()); //call a method on it to create a new DataBuffer containing your bytes.
