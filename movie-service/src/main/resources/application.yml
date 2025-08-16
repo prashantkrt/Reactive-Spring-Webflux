@@ -9,8 +9,8 @@ spring:
 ---
 restClient:
   movie-info-service:
-    url: http://localhost:8080/api/v1/movieinfos
+    url: http://localhost:8081/api/v1/movies/response-entity/getMovieInfo
   review-service:
-    url: http://localhost:8081/api/v1/reviews
+    url: http://localhost:8082/api/v1/review/search
 
 
