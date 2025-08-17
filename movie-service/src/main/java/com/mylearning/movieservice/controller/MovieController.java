@@ -25,11 +25,11 @@ public class MovieController {
     @GetMapping("/{id}")
     public Mono<Movie> retrieveMovieById(@PathVariable("id") String movieId){
 
-        return moviesInfoRestClient.retrieveMovieInfo(movieId)
+        return moviesInfoRestClient.retrieveMovieInfo(movieId) //Mono<MovieInfo>
                 .flatMap(movieInfo -> {
-                    var reviewList = reviewsRestClient.retrieveReviews(movieId)
-                            .collectList();
-                    return reviewList.map(reviews -> new Movie(movieInfo, reviews));
+                    var reviewList = reviewsRestClient.retrieveReviews(movieId) //Flux<Review>
+                            .collectList(); //Mono<List<Review>>
+                    return reviewList.map(reviews -> new Movie(movieInfo, reviews)); // Mono<Movie>
                 });
     }
 
