@@ -84,6 +84,23 @@ public class MovieInfoControllerIntegrationTest {
                         .withStatus(404)));
 
 
+        // we wanted to stub for a POST request
+        // Stub for POST request with a body and response from __files
+        //    WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/api/v1/movies/add"))
+        //            .withRequestBody(WireMock.equalToJson("{ \"id\": \"101\", \"name\": \"Interstellar\" }"))
+        //            .willReturn(WireMock.aResponse()
+        //                    .withStatus(201)
+        //                    .withHeader("Content-Type", "application/json")
+        //                    .withBodyFile("movie-data-response.json"))); // loads from __files
+
+        // or
+        // WireMock.stubFor(WireMock.post(WireMock.urlPathEqualTo("/api/v1/movies"))
+        //        .withRequestBody(WireMock.matchingJsonPath("$.id", WireMock.equalTo("101")))
+        //        .withRequestBody(WireMock.matchingJsonPath("$.name", WireMock.equalTo("Interstellar")))
+        //        .willReturn(WireMock.aResponse()
+        //                .withHeader("Content-Type", "application/json")
+        //                .withStatus(201)
+        //                .withBodyFile("movie-created.json")));
 
         webTestClient.get()
                 .uri("/api/v1/movies/{id}", "abc")
