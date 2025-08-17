@@ -17,6 +17,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 import java.util.Optional;
 import java.util.Set;
@@ -39,6 +40,7 @@ public class ReviewHandler {
     public ReviewHandler(ReviewRepository reviewRepositor) {
         this.reviewRepository = reviewRepositor;
     }
+    Sinks.Many<Review> reviewsSink = Sinks.many().replay().latest();
 
 // Got an error: If reviewRepository.save(review) is reactive (returns Mono<Review>), then bodyValue(...) is wrong, because bodyValue expects a plain object, not a Mono.
 
@@ -65,8 +67,19 @@ public class ReviewHandler {
 
         return serverRequest.bodyToMono(Review.class) // Mono<Review>
                 .doOnNext(this::validate2) // review -> validate(review)
+                .doOnNext(review -> {
+                    reviewsSink.tryEmitNext(review);
+                })
                 .flatMap(reviewRepository::save) // review -> reviewRepository.save(review)
                 .flatMap(review -> ServerResponse.status(HttpStatus.CREATED).bodyValue(review));
+    }
+
+
+    public Mono<ServerResponse> getReviewsStream(ServerRequest serverRequest) {
+        return ServerResponse.ok()
+                .contentType(MediaType.APPLICATION_NDJSON)
+                .body(reviewsSink.asFlux(), Review.class)
+                .log();
     }
 
     // custom Validation class implementation

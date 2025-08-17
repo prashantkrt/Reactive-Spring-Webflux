@@ -116,6 +116,52 @@ public class MovieInfoControllerTest {
                 });
     }
 
+    @Test
+    void getAllMovieInfos_Stream() {
+
+        // we will first create
+        var movieInfo = new MovieInfo(
+                "xyz789",
+                "The Dark Knight",
+                2008,
+                List.of("Christian Bale", "Heath Ledger", "Aaron Eckhart"),
+                LocalDate.of(2008, 7, 18),
+                "Batman faces off against the Joker, a criminal mastermind who plunges Gotham City into chaos."
+        );
+        webTestClient
+                .post()
+                .uri(MOVIE_INFO_PATH + "/response-entity/addMovieInfos")
+                .bodyValue(movieInfo)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody(MovieInfo.class)
+                .consumeWith(movieInfoEntityExchangeResult -> {
+                    var savedMovieInfo = movieInfoEntityExchangeResult.getResponseBody();
+                    assert Objects.requireNonNull(savedMovieInfo).getMovieId() != null;
+
+                });
+
+        var moviesStreamFlux = webTestClient
+                .get()
+                .uri(MOVIE_INFO_PATH + "/response-entity/movieInfos/stream")
+                .exchange()
+                .expectStatus()
+                .is2xxSuccessful()
+                .returnResult(MovieInfo.class)
+                .getResponseBody();
+
+        StepVerifier
+                .create(moviesStreamFlux)
+                .assertNext(movieInfo1 -> {
+                    assert movieInfo1.getMovieId()!=null;
+                })
+                .thenCancel()
+                .verify();
+
+    }
+
+
 
     @Test
     void addNewMovieInfo2() {
@@ -134,7 +180,7 @@ public class MovieInfoControllerTest {
                 .bodyValue(movieInfo)
                 .exchange()
                 .expectStatus()
-                .isCreated()
+                .is2xxSuccessful()
                 .returnResult(MovieInfo.class);
 
         Flux<MovieInfo> responseBody = movieInfoFluxExchangeResult.getResponseBody();

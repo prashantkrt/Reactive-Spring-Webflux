@@ -7,10 +7,12 @@ import com.mylearning.movieinfoservice.service.MovieInfoService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 @RestController
 @RequestMapping("/api/v1/movies/response-entity")
@@ -18,6 +20,9 @@ import reactor.core.publisher.Mono;
 public class MovieInfoResponseEntityController {
 
     private final MovieInfoService movieInfoService;
+
+    //event streaming
+    Sinks.Many<MovieInfo> movieInfoSink = Sinks.many().replay().latest();
 
     public MovieInfoResponseEntityController(MovieInfoService movieInfoService) {
         this.movieInfoService = movieInfoService;
@@ -28,11 +33,19 @@ public class MovieInfoResponseEntityController {
         return movieInfoService
                 .addMovieInfo(movieInfo)
                 .doOnNext(info -> log.info("Fetched movie: {}", info.getName()))
+                .doOnNext(info -> movieInfoSink.tryEmitNext(info)) // SSE => Server Sent Events ,PRODUCES => emit to all subscribers
                 .map(saved -> ResponseEntity.status(HttpStatus.CREATED).body(saved))
                 .doOnSuccess(resp -> log.info("Returned {} products",
                         resp.getBody()))
                 .switchIfEmpty(Mono.error(new MovieInfoException("Unable to add movie")))
                 .log(); // keep for debugging if needed
+    }
+
+    // SSE => Server Sent Events controller
+    //@GetMapping(value = "/movieInfos/stream", produces = MediaType.APPLICATION_NDJSON_VALUE) // for the other microservices
+    @GetMapping(value = "/movieInfos/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE) // for the browser or postman
+    public Flux<MovieInfo> streamMovieInfos() {
+        return movieInfoSink.asFlux();
     }
 
     @GetMapping("/getMovieInfos")

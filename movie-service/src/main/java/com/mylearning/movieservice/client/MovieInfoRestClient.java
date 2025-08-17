@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
@@ -80,6 +81,29 @@ public class MovieInfoRestClient {
         | 3       | Retry #2                      | —                                                              |
         | 4       | Retry #3 (last attempt) fails | Prints "Retries configured: 3" and "Number of retries done: 3" |
         */
+    }
+
+    public Flux<MovieInfo> retrieveMovieInfoStream() {
+
+        var url = "http://localhost:8081/api/v1/movies/response-entity/movieInfos/stream";
+
+        return webClient.get()
+                .uri(url)
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (clientResponse -> {
+                    log.info("Status code is: {}", clientResponse.statusCode().value());
+                    return clientResponse.bodyToMono(String.class)
+                            .flatMap(response -> Mono.error(new MoviesInfoClientException(response, clientResponse.statusCode().value())));
+                }))
+                .onStatus(HttpStatusCode::is5xxServerError, (clientResponse -> {
+                    log.info("Status code : {}", clientResponse.statusCode().value());
+                    return clientResponse.bodyToMono(String.class)
+                            .flatMap(response -> Mono.error(new MoviesInfoServerException(response)));
+                }))
+                .bodyToFlux(MovieInfo.class)
+                .retry(3)
+                .log();
+
     }
 
 }

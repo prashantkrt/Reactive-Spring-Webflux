@@ -41,6 +41,7 @@ public class ReviewRouter {
                 .nest(path("/api/v1/review"), builder ->
                         builder.GET("/search", reviewHandler::getReviewByMovieInfoId)
                                 .GET("/stream", reviewHandler::getAllReview)
+                                .GET("/sinks", reviewHandler::getReviewsStream)
                                 .GET("/{id}", reviewHandler::getReview)
                                 .POST("", reviewHandler::addReview)
                                 .PUT("/{id}", reviewHandler::updateReview)
