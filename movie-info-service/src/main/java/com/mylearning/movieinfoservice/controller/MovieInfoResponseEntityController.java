@@ -1,5 +1,6 @@
 package com.mylearning.movieinfoservice.controller;
 
+import com.mylearning.movieinfoservice.exception.MovieInfoException;
 import com.mylearning.movieinfoservice.exception.MovieInfoNotfoundException;
 import com.mylearning.movieinfoservice.model.MovieInfo;
 import com.mylearning.movieinfoservice.service.MovieInfoService;
@@ -30,6 +31,7 @@ public class MovieInfoResponseEntityController {
                 .map(saved -> ResponseEntity.status(HttpStatus.CREATED).body(saved))
                 .doOnSuccess(resp -> log.info("Returned {} products",
                         resp.getBody()))
+                .switchIfEmpty(Mono.error(new MovieInfoException("Unable to add movie")))
                 .log(); // keep for debugging if needed
     }
 
@@ -54,8 +56,7 @@ public class MovieInfoResponseEntityController {
     @DeleteMapping("/deleteMovieInfo/{movieId}")
     public Mono<ResponseEntity<Void>> deleteMovieInfo(@PathVariable String movieId) {
         return movieInfoService.deleteMovieInfo(movieId)
-                .thenReturn(ResponseEntity.noContent().build()); // 204 No Content
-
+                .then(Mono.just(ResponseEntity.noContent().build())); // 204 No Content
     }
 
     @PutMapping("/updateMovieInfo")

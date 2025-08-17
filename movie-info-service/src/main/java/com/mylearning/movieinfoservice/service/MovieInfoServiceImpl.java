@@ -1,5 +1,6 @@
 package com.mylearning.movieinfoservice.service;
 
+import com.mylearning.movieinfoservice.exception.MovieInfoNotfoundException;
 import com.mylearning.movieinfoservice.model.MovieInfo;
 import com.mylearning.movieinfoservice.repository.MovieInfoRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,13 @@ public class MovieInfoServiceImpl implements MovieInfoService {
 
     @Override
     public Mono<Void> deleteMovieInfo(String movieId) {
-        return movieInfoRepository.deleteById(movieId).log();
+       return movieInfoRepository.existsById(movieId)
+                .flatMap(exists -> {
+                    if (!exists) {
+                        return Mono.error(new MovieInfoNotfoundException("Movie not found with id: " + movieId));
+                    }
+                    return movieInfoRepository.deleteById(movieId).log();
+                });
     }
 
     @Override
