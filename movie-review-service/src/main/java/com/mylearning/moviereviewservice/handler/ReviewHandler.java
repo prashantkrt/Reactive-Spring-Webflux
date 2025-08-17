@@ -102,12 +102,22 @@ public class ReviewHandler {
     public Mono<ServerResponse> getReview(ServerRequest serverRequest) {
         log.info("ReviewHandler.getReview");
         String id = serverRequest.pathVariable("id");
-        return ServerResponse.ok().body(reviewRepository.findById(id), Review.class);
+        return reviewRepository.findById(id)
+                .flatMap(review -> ServerResponse.ok().bodyValue(review))
+                .switchIfEmpty(Mono.error(new ReviewNotFoundException("Review not Found for the given Review Id: " + id)));// return 404 if no review
+//                .onErrorResume(ex -> {
+//                    log.error("Error fetching review for id: {}", id, ex);
+//                    return ServerResponse.status(HttpStatus.INTERNAL_SERVER_ERROR)
+//                            .bodyValue("Something went wrong while fetching the review");
+//                });
     }
 
     public Mono<ServerResponse> getAllReview(ServerRequest serverRequest) {
         log.info("ReviewHandler.getAllReview");
-        return ServerResponse.ok().body(reviewRepository.findAll(), Review.class);
+        return reviewRepository.findAll()
+                .switchIfEmpty(Mono.error(new ReviewNotFoundException("No reviews found")))
+                .collectList()
+                .flatMap(reviews -> ServerResponse.ok().bodyValue(reviews));
     }
 
     //http://localhost:8081/api/v1/review/search?movieInfoId=101
