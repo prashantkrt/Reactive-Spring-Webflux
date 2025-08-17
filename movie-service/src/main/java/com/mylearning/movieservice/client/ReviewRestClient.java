@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.util.UriComponentsBuilder;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -63,7 +64,7 @@ public class ReviewRestClient {
                         .filter(throwable -> throwable instanceof ReviewsServerException || throwable instanceof WebClientRequestException webClientRequestException && webClientRequestException.getCause() instanceof ConnectException)
                         .onRetryExhaustedThrow((spec, signal) -> {
                             log.error("Retry exhausted");
-                            return signal.failure();
+                            return Exceptions.propagate(signal.failure()); //Wraps the exception in a RuntimeException if it’s a checked exception. return Mono.error(signal.failure());
                         }))
                 .log();
     }
