@@ -1,0 +1,119 @@
+package com.mylearning.movieservice;
+
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.mylearning.movieservice.model.Movie;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.contract.wiremock.AutoConfigureWireMock;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.reactive.server.WebTestClient;
+
+import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
+@AutoConfigureWebTestClient
+@AutoConfigureWireMock(port = 8085)
+//Spins up the http server automatically,
+//Spins up a WireMock server (a fake HTTP server for mocking external services) and Starts WireMock on 8085
+@TestPropertySource(
+        properties = {
+                "restClient.movie-info-service.url=http://localhost:8085/api/v1/movies/response-entity/getMovieInfo",
+                "restClient.review-service.url=http://localhost:8085/api/v1/review/search",
+
+        })
+public class MovieInfoControllerIntegrationTest {
+
+    @Autowired
+    private WebTestClient webTestClient;
+
+    @BeforeEach
+    void setUp() {
+        WireMock.reset();
+    }
+
+    @Test
+    void retrieveMovieById() {
+        //given
+        var movieId = "abc";
+
+        WireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/api/v1/movies/response-entity/getMovieInfo/" + movieId))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("movieInfo.json")));
+
+        WireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/api/v1/review/search?movieInfoId=" + movieId))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("reviews.json")));
+
+        //when
+        webTestClient.get()
+                .uri("/api/v1/movies/{id}", "abc")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Movie.class)
+                .consumeWith(movieEntityExchangeResult -> {
+                            var movie = movieEntityExchangeResult.getResponseBody();
+                            assert Objects.requireNonNull(movie).getReviewList().size() == 2;
+                            assertEquals("Batman Begins", movie.getMovieInfo().getName());
+                        }
+                );
+    }
+
+    @Test
+    void retrieveMovieById_404() {
+        //given
+        var movieId = "abc";
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/api/v1/movies/response-entity/getMovieInfo/" + movieId))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(404)));
+
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/api/v1/review/search"))
+                .withQueryParam("movieInfoId", WireMock.equalTo(movieId))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(404)));
+
+
+
+        webTestClient.get()
+                .uri("/api/v1/movies/{id}", "abc")
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+    }
+
+    @Test
+    void retrieveMovieById_Reviews_404() {
+        //given
+        var movieId = "abc";
+        WireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/api/v1/movies/response-entity/getMovieInfo/" + movieId))
+                .willReturn(WireMock.aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("movieinfo.json")));
+
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/api/v1/review/search"))
+                .withQueryParam("movieInfoId", WireMock.equalTo(movieId))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(404)));
+
+
+        //when
+        webTestClient.get()
+                .uri("/api/v1/movies/{id}", "abc")
+                .exchange()
+                .expectStatus().is2xxSuccessful();
+
+    }
+
+
+}
