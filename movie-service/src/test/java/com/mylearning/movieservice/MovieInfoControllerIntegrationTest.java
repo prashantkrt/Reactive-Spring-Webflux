@@ -115,5 +115,66 @@ public class MovieInfoControllerIntegrationTest {
 
     }
 
+    @Test
+    void retrieveMovieById_5XX() {
+        //given
+        var movieId = "abc";
+        WireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/api/v1/movies/response-entity/getMovieInfo/" + movieId))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(500)
+                        .withBody("MovieInfo Service Unavailable")));
+
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/api/v1/review/search"))
+                .withQueryParam("movieInfoId", WireMock.equalTo(movieId))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(500)));
+
+
+        //when
+        webTestClient.get()
+                .uri("/api/v1/movies/{id}", "abc")
+                .exchange()
+                .expectStatus().is5xxServerError()
+                .expectBody(String.class)
+                .value(message -> {
+                    assertEquals("Server Exception in MovieInfoService: MovieInfo Service Unavailable", message);
+                });
+
+        //then
+        WireMock.verify(1, WireMock.getRequestedFor(WireMock.urlEqualTo("/api/v1/movies/response-entity/getMovieInfo/" + movieId)));
+    }
+
+    @Test
+    void retrieveMovieById_reviews_5XX() {
+
+        //given
+        var movieId = "abc";
+        WireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/api/v1/movies/response-entity/getMovieInfo/" + movieId))
+                .willReturn(WireMock.aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBodyFile("movieinfo.json")));
+
+
+        WireMock.stubFor(WireMock.get(WireMock.urlPathEqualTo("/api/v1/review/search"))
+                .withQueryParam("movieInfoId", WireMock.equalTo(movieId))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(500)
+                        .withBody("Review Service Unavailable")));
+
+        //when
+        webTestClient.get()
+                .uri("/api/v1/movies/{id}", "abc")
+                .exchange()
+                .expectStatus().is5xxServerError()
+                .expectBody(String.class)
+                .value(message -> {
+                    assertEquals("Server error: Review Service Unavailable", message);
+                });
+
+        //then
+        WireMock.verify(1, WireMock.getRequestedFor(WireMock.urlPathMatching("/api/v1/movies/response-entity/getMovieInfo/" + movieId)));
+    }
+
+
 
 }
