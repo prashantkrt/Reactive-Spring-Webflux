@@ -12,6 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import java.time.Duration;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -166,6 +167,11 @@ public class MovieInfoControllerIntegrationTest {
 
         //given
         var movieId = "abc";
+
+        WebTestClient webTestClientWithTimeout = webTestClient.mutate()
+                .responseTimeout(Duration.ofSeconds(15)) // increase as needed
+                .build();
+
         WireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/api/v1/movies/response-entity/getMovieInfo/" + movieId))
                 .willReturn(WireMock.aResponse()
                         .withHeader("Content-Type", "application/json")
@@ -179,7 +185,7 @@ public class MovieInfoControllerIntegrationTest {
                         .withBody("Review Service Unavailable")));
 
         //when
-        webTestClient.get()
+        webTestClientWithTimeout.get()
                 .uri("/api/v1/movies/{id}", "abc")
                 .exchange()
                 .expectStatus().is5xxServerError()
@@ -188,8 +194,13 @@ public class MovieInfoControllerIntegrationTest {
                     assertEquals("Server error: Review Service Unavailable", message);
                 });
 
-        //then
+        // then
+        // First attempt → counts as 1.
+        // Retry #1 → second request.
+        // Retry #2 → third request.
+        // Retry #3 → fourth request.
         WireMock.verify(1, WireMock.getRequestedFor(WireMock.urlPathMatching("/api/v1/movies/response-entity/getMovieInfo/" + movieId)));
+        WireMock.verify(4, WireMock.getRequestedFor(WireMock.urlPathMatching("/api/v1/review/search")));
     }
 
 

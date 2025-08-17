@@ -9,7 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+
+import java.net.ConnectException;
+import java.time.Duration;
 
 @Component
 @Slf4j
@@ -52,7 +57,29 @@ public class MovieInfoRestClient {
                             )));
                 })
                 .bodyToMono(MovieInfo.class) // decode only if 2xx success
+                // retry 3 times with fixed delay
+                .retryWhen(
+                        Retry.fixedDelay(3, Duration.ofSeconds(2))
+                                .filter(ex -> ex instanceof MoviesInfoServerException ||ex instanceof WebClientRequestException wcre && wcre.getCause() instanceof ConnectException) // only retry for server exceptions
+                                //.onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> retrySignal.failure())  // after 3 retries,throw the last exception
+                                .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> {
+                                    //  max number of retries
+                                    System.out.println("Configured retries: " + retryBackoffSpec.maxAttempts);
+                                    // Using retrySignal (runtime info)
+                                    System.out.println("Retries actually done: " + retrySignal.totalRetries());
+                                    System.out.println("Last exception: " + retrySignal.failure().getMessage());
+                                    return retrySignal.failure(); // propagate last failure, .failure() returns that last exception.
+                                }))
                 .log();
+
+        /*
+        | Attempt | Action                        | Output                                                         |
+        | ------- | ----------------------------- | -------------------------------------------------------------- |
+        | 1       | Call fails                    | —                                                              |
+        | 2       | Retry #1                      | —                                                              |
+        | 3       | Retry #2                      | —                                                              |
+        | 4       | Retry #3 (last attempt) fails | Prints "Retries configured: 3" and "Number of retries done: 3" |
+        */
     }
 
 }

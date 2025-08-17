@@ -9,9 +9,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
+
+import java.net.ConnectException;
+import java.time.Duration;
 
 @Component
 @Slf4j
@@ -54,6 +59,12 @@ public class ReviewRestClient {
                             .flatMap(response -> Mono.error(new ReviewsServerException("Server error: " + response)));
                 })
                 .bodyToFlux(Review.class)
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1))
+                        .filter(throwable -> throwable instanceof ReviewsServerException || throwable instanceof WebClientRequestException webClientRequestException && webClientRequestException.getCause() instanceof ConnectException)
+                        .onRetryExhaustedThrow((spec, signal) -> {
+                            log.error("Retry exhausted");
+                            return signal.failure();
+                        }))
                 .log();
     }
 
